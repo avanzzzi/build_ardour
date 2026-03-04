@@ -1,9 +1,10 @@
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 # install packages
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive TZ=America/Sao_Paulo apt-get install -qy \
-  python \
+  python-is-python3 \
+  python3 \
   build-essential \
   pkg-config \
   checkinstall \
@@ -41,13 +42,21 @@ RUN DEBIAN_FRONTEND=noninteractive TZ=America/Sao_Paulo apt-get install -qy \
   libcwiid-dev \
   libxwiimote-dev \
   libwebsockets-dev \
-  libjack-dev
+  libjack-jackd2-dev \
+  libjack-jackd2-0 \
+  chrpath \
+  unzip \
+  rsync
 
-RUN git clone --depth 1 --branch 6.9 https://github.com/Ardour/ardour.git /src
+RUN git clone --depth 1 --branch 9.2 https://github.com/Ardour/ardour.git /src
 WORKDIR /src
 
-RUN ./waf configure --with-backends=jack,alsa,dummy --libjack=weak --optimize --cxx11 --freedesktop --ptformat --no-phone-home
+RUN ./waf configure --with-backends=jack,alsa,dummy --libjack=weak --optimize --freedesktop --ptformat --no-phone-home
 RUN ./waf build
+# RUN ./waf install
 
-CMD checkinstall -y -D --install=no --pkgname=ardour --pkgversion=1:6.9.0 --pkgrelease=2 --provides=ardour --nodoc ./waf install && \
-    cp ardour_*.deb /src/target
+WORKDIR /src/tools/linux_packaging
+RUN ./build --public --strip some
+RUN ./package --public --singlearch
+
+CMD cp /src/tools/linux_packaging/Ardour*.tar /src/target
